@@ -55,8 +55,6 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
 
     //Main Mint Function
     function mintHmyn()payable public {
-    
-      
       require(tokenCounter < totalAllowed);
       require(msg.value == mintPrice);
 
@@ -78,11 +76,7 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
           currentHmynStartBlock = currentHmynStartBlock + blockInterval;
           currentHmynEndBlock = currentHmynEndBlock + blockInterval;
           currentHmynTokenRangeEnd = currentHmynTokenRangeEnd + hmynInternval;
-         
       }
-      
-        
-     
     }
  
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
