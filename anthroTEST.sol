@@ -17,10 +17,7 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
     uint256 public currentHmynTokenRangeEnd = 777;
     uint256 public currentHmynStartBlock = 0;
     uint256 public currentHmynEndBlock = block.number; 
-    
-    
 
-    
       constructor() ERC721("Anthromancer", "HYMN")
     {   //Intitalize Hymn Struct w/all info here in contructor
      
