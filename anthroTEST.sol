@@ -11,6 +11,14 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
     uint256 public mintPrice = 0;
     uint256 public totalAllowed = 11655;
     uint256 public blockInterval = 6500;
+
+    uint256 public currentHymn = 0;
+    uint256 public currentHmynTokenRangeEnd = 777;
+    uint256 public currentHmynStartBlock = 0;
+    uint256 public currentHmynEndBlock = block.number;
+    
+    
+
     
       constructor() ERC721("Anthromancer", "HYMN")
     {   //Intitalize Hymn Struct w/all info here in contructor
@@ -18,129 +26,23 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
         idToHymn[0] = Hymn(
             1,
             "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + blockInterval,
             "IPFS ADDRESS"
       );
        
        idToHymn[1] = Hymn(
             2,
             "Hymn 02",
-            778,
-            1554,
-            block.number + blockInterval + 1,
-            block.number + (blockInterval* 2),
             "IPFS ADDRESS"
       );
        idToHymn[2] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number + ((blockInterval * 2) + 1),
-            block.number + (blockInterval * 3),
+            3,
+            "Hymn 03",
             "IPFS ADDRESS"
       );
 
         idToHymn[3] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
-            "IPFS ADDRESS"
-      );
-
-             idToHymn[4] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
-            "IPFS ADDRESS"
-      );
-
-             idToHymn[5] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
-            "IPFS ADDRESS"
-      );
-
-             idToHymn[6] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
-            "IPFS ADDRESS"
-      );
-
-             idToHymn[7] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
-            "IPFS ADDRESS"
-      );
-
-             idToHymn[8] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
-            "IPFS ADDRESS"
-      );
-
-             idToHymn[9] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
-            "IPFS ADDRESS"
-      );
-
-             idToHymn[10] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
-            "IPFS ADDRESS"
-      );
-
-        idToHymn[11] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
-            "IPFS ADDRESS"
-      );
-
-        idToHymn[12] = Hymn(
-            1,
-            "Hymn 01",
-            0,
-            777,
-            block.number,
-            block.number + 4480,
+            4,
+            "Hymn 04",
             "IPFS ADDRESS"
       );
 
@@ -148,18 +50,10 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
     }
 
    struct Hymn {
-        uint256 _hymnId;
+        uint256 _hymn;
         string _hymnName;
-        uint256 _tokenStart;
-        uint256 _tokenEnd;
-        uint256 _blockStart;
-        uint256 _blockEnd;
         string _ipfsAddress;
     } mapping(uint256 => Hymn) public idToHymn;
-
-    uint256 public currentHymnId = 0;
-    uint256 public currentHmynRange = block.number;
-    uint256 public currentHmynStart = 0;
 
     //Main Mint Function
     function mintHmyn()payable public {
@@ -168,46 +62,26 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
       require(tokenCounter < totalAllowed);
       require(msg.value == mintPrice);
 
-      if (block.number > currentHmynStart){
+     //Check block number & mint logic
+      if (block.number > currentHmynStartBlock){
        _safeMint(msg.sender, tokenCounter);
-       _setTokenURI(tokenCounter, "tempURI");    
-   
-     
+       _setTokenURI(tokenCounter, idToHymn[currentHymn]._ipfsAddress);    
        tokenCounter = tokenCounter + 1;
       }
 
-      if (tokenCounter >= 777){
-          currentHmynStart = 7;
+     //Alter token range logic
+     //IF the # of tokens minted is higher than the current Hymn End range
+      //THEN move the start of the Current Hymn Range to 
+      if (tokenCounter >= currentHmynTokenRangeEnd){
+          currentHmynStartBlock = currentHmynStartBlock + blockInterval;
+          currentHmynEndBlock = currentHmynEndBlock + blockInterval;
+          currentHmynTokenRangeEnd = currentHmynTokenRangeEnd + 777;
+          currentHymn = currentHymn + 1;
       }
       
         
      
     }
- 
-    //Backup Mint Function to mint Hmyns whose block range has passed and which were not minted out in that time
-    function mintHmynBackup()payable public {
-    
-      
-      require(tokenCounter < totalAllowed);
-      require(msg.value == mintPrice);
-
-      if (block.number > currentHmynStart){
-       _safeMint(msg.sender, tokenCounter);
-       _setTokenURI(tokenCounter, "tempURI");    
-   
-     
-       tokenCounter = tokenCounter + 1;
-      }
-
-      if (tokenCounter >= 777){
-          currentHmynStart = 7;
-      }
-      
-        
-     
-    }
- 
- 
  
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
