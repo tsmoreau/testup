@@ -8,14 +8,15 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
     
     uint256 public tokenCounter = 0;    
-    uint256 public mintPrice = 0;
-    uint256 public totalAllowed = 11655;
-    uint256 public blockInterval = 6500;
+    uint256 public mintPrice = 0; //Set to 0 for testing
+    uint256 public totalAllowed = 11655; //777*13
+    uint256 public blockInterval = 6500; //About 6500 Blocks in a day per Etherscan data
+    uint256 public hmynInternval = 777;
 
     uint256 public currentHymn = 0;
     uint256 public currentHmynTokenRangeEnd = 777;
     uint256 public currentHmynStartBlock = 0;
-    uint256 public currentHmynEndBlock = block.number;
+    uint256 public currentHmynEndBlock = block.number; 
     
     
 
@@ -70,13 +71,17 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
       }
 
      //Alter token range logic
-     //IF the # of tokens minted is higher than the current Hymn End range
-      //THEN move the start of the Current Hymn Range to 
+      //IF the # of Hymns minted is greater than or equal to the current Hmyn Range End
+      //THEN adjust the currentHmyn UP by 1
+      //AND move the START of the Current Hymn Range forward by the blockInterval
+      //AND move the END of the Current Hymn Range forward by the blockInterval
+      //AND move the Current Hmyn Range End forward by the hmynInternval
       if (tokenCounter >= currentHmynTokenRangeEnd){
+          currentHymn = currentHymn + 1;
           currentHmynStartBlock = currentHmynStartBlock + blockInterval;
           currentHmynEndBlock = currentHmynEndBlock + blockInterval;
-          currentHmynTokenRangeEnd = currentHmynTokenRangeEnd + 777;
-          currentHymn = currentHymn + 1;
+          currentHmynTokenRangeEnd = currentHmynTokenRangeEnd + hmynInternval;
+         
       }
       
         
