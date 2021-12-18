@@ -6,64 +6,66 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
 contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
-    
-    uint256 public tokenCounter = 1; //Reserving Token 0 for The Fool
 
     uint256 public mintPrice = 0; //Set to 0 for testing
     uint256 public mintPriceLate = 0; //Set to 0 for testing
-
-    uint256 public totalAllowed = 10102; //777*13+1 (Plus 1 for the Fool)
-    uint256 public blockInterval = 65; //About 6500 Blocks in a day per Etherscan data, 65 block temp for test
-    uint256 public hmynInternval = 7; //Final will be 777
-
-    uint256 public currentHymn = 1; //Set to 1 to avoid The Fool; not absolutely needed to make data align this way, but is the better design pattern
-    uint256 public currentHmynEnd = 777;
-    uint256 public currentHmynStartBlock = 0;
-    uint256 public currentHmynEndBlock = block.number; 
+    uint256 public blockInterval = 23; //About 6500 Blocks in a day per Etherscan data, 23 Blocks set for Test, ~5mins
+    uint256 public hymnInterval = 7; //Final will be 777
+    uint256 public deployBlock = block.number; 
 
       constructor() ERC721("Anthromancer", "HYMN")
     {   //Intitalize Hymn Struct w/all info here in contructor
 
-    //Vairbles in struct:
-    //_hymn
-    //_hymnName
-    //_ipfsAddress
-    //_hmynEndBlock
-    //_hymnsMinted;
+     //Vairbles in struct:
+     //_hymn
+     //_hymnName
+     //_ipfsAddress
+     //_hymnEndBlock
+     //_hymnCounter;
      
       idToHymn[0] = Hymn(
             0,
             "The Fool",
-            "IPFS ADDRESS",
+            "ipfs://QmPD39gT2BYfDotb65HwVHkDoALauUwUkKWPUnHSf1UpK8",
             999999999999, //Placeholder. Not read at all my by the Main Mint function, as that starts reading from position 1 in the array, thanks to the Token Counter being set at 1. This allows position 0 in all data storage (token or array) to be The Fool. Design patern consistency.
+            0,
+            0,
             0
       );
        idToHymn[1] = Hymn(
             1,
             "Fireyes",
-            "IPFS ADDRESS",
+            "ipfs://QmaE1826X1EVs7X783xUdYYB2u2UwTEQYn42ssiVW92XBE",
             block.number + blockInterval, //Hymn 1 Mint Period End Block is the block number upon deployment plus the block interval
-            0
+            1, //Think of this as the start of the Token Range, the mint funtion checks it against the hmynInterval
+            1,
+            1
       );
         idToHymn[2] = Hymn(
             2,
             "Meatwar",
-            "IPFS ADDRESS",
+            "ipfs://QmdZoFrr8csYkh9zwgdK2k3nnQFZ72pxUMjhNkPv7aZHpF",
             block.number + (blockInterval * 2), //Hymn 2 Mint Period End Block is the block number upon deployment plus the block interval x2
-            0
+            1 + hymnInterval,
+            1 + hymnInterval,
+            1
       );
        idToHymn[3] = Hymn(
             3,
             "Optimo",
             "IPFS ADDRESS",
             block.number + (blockInterval * 3), //Hymn 3 Mint Period End Block is the block number upon deployment plus the block interval x3
-            0
+            1 + (hymnInterval * 2),
+            1 + (hymnInterval * 2),
+            1
       );
        idToHymn[4] = Hymn(
             4,
-            "Lasers",
+            "Seasons",
             "IPFS ADDRESS",
             block.number + (blockInterval * 4), //Hymn 4 Mint Period End Block is the block number upon deployment plus the block interval x4
+            1 + (hymnInterval * 3),
+            1 + (hymnInterval * 3),
             0
       );
        idToHymn[5] = Hymn(
@@ -71,6 +73,8 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
             "Dragoon",
             "IPFS ADDRESS",
             block.number + (blockInterval * 5), //Hymn 5 Mint Period End Block is the block number upon deployment plus the block interval x5
+            1 + (hymnInterval * 4),
+            1 + (hymnInterval * 4),
             0
       );  
     }
@@ -79,47 +83,79 @@ contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
         uint256 _hymn;
         string _hymnName;
         string _ipfsAddress;
-        uint256 _hmynEndBlock;
+        uint256 _hymnEndBlock;
+        uint256 _hymnStart;
+        uint256 _hymnCounter;
         uint256 _hymnsMinted;
     } mapping(uint256 => Hymn) public idToHymn;
 
-    //Main Mint Function
-    function mintHmyn()payable public {
-      require(tokenCounter < totalAllowed);
+   //Main Mint Function
+   function mintHymn() payable public{
       require(msg.value == mintPrice, "Please send the Mint Price.");
 
-    //
-      if (tokenCounter >= currentHmynEnd){ //IF the # of Hymns minted is greater than or equal to the current Hmyn Range End
-          currentHymn = currentHymn + 1; //Adjust the currentHmyn UP by 1
-          currentHmynStartBlock = currentHmynEndBlock + 1; //Move the currentHmynStartBlock forward to the where the previous ended
-          currentHmynEndBlock = currentHmynEndBlock + blockInterval; //Move the currentHmynEndBlock forward by the blockInterval
-          tokenCounter = currentHmynEnd + 1; //Move the tokenId assigned up to the correct number for the New Hmyn 
-          currentHmynEnd = currentHmynEnd + hmynInternval; //Move the Current Hmyn Range End forward by the hmynInterval
+      if (block.number > deployBlock && block.number < deployBlock + blockInterval) { //Mints Hymn 1 between the deployment block and X blocks later, determined the blockInterval
+      require (idToHymn[1]._hymnsMinted <= hymnInterval, "Hymn 1 has been completely Minted. Please Wait for Next Hymn"); //REQUIRE that the Hymn being requested for Mint has not yet had more than the hymnInterval of it minted
+       _safeMint(msg.sender, idToHymn[1]._hymnCounter); //Mint the token based on the individual Hymn Counter
+       _setTokenURI(idToHymn[1]._hymnCounter, idToHymn[1]._ipfsAddress); //Assigns data to that token 
+       idToHymn[1]._hymnCounter = idToHymn[1]._hymnCounter + 1; //Move the individual Hymn Counter Up by One
+       idToHymn[1]._hymnsMinted = idToHymn[1]._hymnsMinted + 1; //Move the number of Hymns Minted Up by One
       }
 
-     //Check block number logic & mint logic
-      if (block.number > currentHmynStartBlock && block.number < currentHmynEndBlock){
-       _safeMint(msg.sender, tokenCounter);
-       _setTokenURI(tokenCounter, idToHymn[currentHymn]._ipfsAddress);    
-       tokenCounter = tokenCounter + 1;
-       idToHymn[currentHymn]._hymnsMinted = idToHymn[currentHymn]._hymnsMinted + 1;
+      //Hymn 2
+       if (block.number > (deployBlock + blockInterval) && block.number < (deployBlock + (blockInterval * 2))) { //Mints Hymn 2 between the deployment block and the 2X blocks later, determined by two multiples of the blockInterval
+       require (idToHymn[2]._hymnsMinted <= hymnInterval, "Hymn 2 has been completely Minted."); //REQUIRE that the Hymn being requested for Mint has not yet had more than the hymnInterval of it minted
+       _safeMint(msg.sender, idToHymn[2]._hymnCounter); //Mint the token based on the individual Hymn Counter
+       _setTokenURI(idToHymn[2]._hymnCounter, idToHymn[2]._ipfsAddress); //Assigns data to that token 
+       idToHymn[2]._hymnCounter = idToHymn[2]._hymnCounter + 1; //Move the individual Hymn Counter Up by One
+       idToHymn[2]._hymnsMinted = idToHymn[2]._hymnsMinted + 1; //Move thtone number of Hymns Minted Up by One
+       }
+
+      //Hymn 3
+       if (block.number > (deployBlock + blockInterval * 2) && block.number < (deployBlock + (blockInterval * 3))) { //Mints Hymn 3 between the deployment block and the 3X blocks later, determined by two multiples of the blockInterval
+      require (idToHymn[1]._hymnsMinted <= hymnInterval, "Hymn 3 has been completely Minted."); //REQUIRE that the Hymn being requested for Mint has not yet had more than the hymnInterval of it minted
+       _safeMint(msg.sender, idToHymn[3]._hymnCounter); //Mint the token based on the individual Hymn Counter
+       _setTokenURI(idToHymn[3]._hymnCounter, idToHymn[3]._ipfsAddress); //Assigns data to that token 
+       idToHymn[3]._hymnCounter = idToHymn[3]._hymnCounter + 1; //Move the individual Hymn Counter Up by One
+       idToHymn[3]._hymnsMinted = idToHymn[3]._hymnsMinted + 1; //Move the number of Hymns Minted Up by One
       }
 
-     //Alter token range logic
+      
 
-    }
+   }
 
-    //Late Mint Function
-     function mintLateHmyn(uint hmynNumber)payable public {
-      require (block.number > idToHymn[hmynNumber]._hmynEndBlock, "This Hmyn has not yet Dropped."); //REQUIRE that the current block number is greater than the End Block of the Hymn being requested for Mint 
-      require (idToHymn[hmynNumber]._hymnsMinted < 778, "This Hmyn has been completely Minted."); //REQUIRE that the Hymn being requested for Mint has not yet had more than 777 of it minted
-      require(totalSupply() < totalAllowed); //REQUIRE that the total supply of the token (not the current iterated count) is less than the Total Allowed Tokens
+   //Late Mint Function
+   function mintLateHymn(uint hymnNumber)payable public {
+      require (block.number > idToHymn[hymnNumber]._hymnEndBlock, "This Hymn has not yet Dropped."); //REQUIRE that the current block number is greater than the End Block of the Hymn being requested for Mint 
+      require (idToHymn[hymnNumber]._hymnsMinted <= hymnInterval, "This Hymn has been completely Minted."); //REQUIRE that the Hymn being requested for Mint has not yet had more than 777 of it minted
       require(msg.value == mintPriceLate, "Please send the Mint Price."); //REQUIRE the message value is the Late Mint Price
-      _safeMint(msg.sender, idToHymn[hmynNumber]._hymnsMinted); //MINT a Token to the user with a TokenId based on the current Hmyn Count (Read: Minted) of the Hmyn being requested for Mint
-      _setTokenURI(idToHymn[hmynNumber]._hymnsMinted, idToHymn[hmynNumber]._ipfsAddress); //ASSIGN DATA to that same TokenId based on the same Hmyn being requested for that Hmyn's storage location
-      idToHymn[hmynNumber]._hymnsMinted + 1; //ITERATE UP the count of Hmyns minted   
+      _safeMint(msg.sender, idToHymn[hymnNumber]._hymnCounter); //MINT a Token to the user with a TokenId based on the current Hymn Count of the Hymn being requested for Mint
+      _setTokenURI(idToHymn[hymnNumber]._hymnCounter, idToHymn[hymnNumber]._ipfsAddress); //ASSIGN DATA to that same TokenId based on the same Hymn being requested for that Hymn's storage location
+       idToHymn[hymnNumber]._hymnCounter = idToHymn[hymnNumber]._hymnCounter + 1; //Move the individual Hymn Counter Up by One
+       idToHymn[hymnNumber]._hymnCounter = idToHymn[hymnNumber]._hymnsMinted + 1; //Move the number of Hymns Minted Up by One
+   }
 
-    }
+   //Fool Mint Function
+   function mintTheFool() public onlyOwner {
+      _safeMint(msg.sender, 0); 
+      _setTokenURI(0, idToHymn[0]._ipfsAddress); 
+   }
+
+   //Fool Mint Function
+   function currentHymn() public view returns(string memory)  {
+      string memory hymn;
+      if (block.number > deployBlock && block.number <= (deployBlock + blockInterval)) {
+         hymn = idToHymn[1]._hymnName;
+      }
+      if (block.number > (deployBlock + blockInterval) && block.number <= (deployBlock + (blockInterval * 2))) {
+         hymn = idToHymn[2]._hymnName;
+      }
+       if (block.number > (deployBlock + blockInterval) && block.number <= (deployBlock + (blockInterval * 3))) {
+         hymn = idToHymn[3]._hymnName;
+      }
+      return hymn;
+   }
+
+    //Igdresil card?
  
     function _beforeTokenTransfer(address from, address to, uint256 tokenId)
         internal
