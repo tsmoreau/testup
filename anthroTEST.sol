@@ -1,113 +1,94 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+//    ___          __  __                                                                 
+//   /   |  ____  / /_/ /_  _________  ____ ___  ____ _____  ________  _____              
+//  / /| | / __ \/ __/ __ \/ ___/ __ \/ __ `__ \/ __ `/ __ \/ ___/ _ \/ ___/              
+// / ___ |/ / / / /_/ / / / /  / /_/ / / / / / / /_/ / / / / /__/  __/ /                  
+///_/  |_/_/ /_/\__/_/ /_/_/   \____/_/ /_/ /_/\__,_/_/ /_/\___/\___/_/                   
+//__  __                __                _ __   ______            __                  __ 
+//\ \/ /___ _____ _____/ /________ ______(_) /  / ____/___  ____  / /__________ ______/ /_
+// \  / __ `/ __ `/ __  / ___/ __ `/ ___/ / /  / /   / __ \/ __ \/ __/ ___/ __ `/ ___/ __/
+// / / /_/ / /_/ / /_/ / /  / /_/ (__  ) / /  / /___/ /_/ / / / / /_/ /  / /_/ / /__/ /_  
+///_/\__, /\__, /\__,_/_/   \__,_/____/_/_/   \____/\____/_/ /_/\__/_/   \__,_/\___/\__/  
+//  /____//____/                                                                          
 
+pragma solidity ^0.8.2;
+
+/// @title Reward contract for Original Anthromancer Kickstarter Backers
+/// @author tsmoreau
+/// @notice Contract is designed to be minted from only by owner
+/// @dev Tokens are minted by owner and transferred via transferToBacker
+/// @dev Designed to be used in combination with a relayer for distribution
+
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 
-contract Anthromancer is ERC721URIStorage, ERC721Enumerable, Ownable {
+contract Yggdrasil is ERC1155, Ownable, ERC1155Burnable {
+    constructor()
+        ERC1155("ipfs://QmZL6Swfj6j86FU5eg16F293fVYeYjkzphfxvuXVrBT83J")
+    {}
+
+    /// @notice Total token supply
+    /// @dev Altered by mint & burn functions
+    uint256 supply;
+
+    /// @notice Address of the relayer used for token distribution
+    address public relayerAddress;
+
+    /// @notice Address used for token minting and storage
+    address public anthroWalletAddress;
+
+    /// @notice Getter function for front-ends
+    function totalSupply() public view returns(uint256) {
+        return (supply);
+    }
+
+    /// @notice Set relayer address, can only be used by Owner
+    function setRelayerAddress(address relayer) public onlyOwner {
+        relayerAddress = relayer;
+        setApprovalForAll(relayer, true);
+    }
+
+    /// @notice Set anthromancer wallet address, can only be used by Owner
+    function setAnthroWalletAddress(address anthroWallet) public onlyOwner {
+        anthroWalletAddress = anthroWallet;
+    }
+
+    /// @notice Main mint function, can only be used by Owner
+    function mintBatch(uint total)
+        public
+        onlyOwner{
+
+         uint[] memory tokenId = new uint[](1);
+        tokenId[0] = 1;  
+
+        uint[] memory amount = new uint[](1);
+        amount[0] = total;
+        
+
+        supply = supply + total;
+        
+        _mintBatch(msg.sender, tokenId, amount, abi.encodePacked("1"));
+    }
+
+    /// @notice Main distro function, can only be used by Owner & Relayer
+    function transferToBacker(address backerAddress) public {
+        require (msg.sender == owner() || msg.sender == relayerAddress);
+        _safeTransferFrom(anthroWalletAddress, backerAddress, 1, 1, abi.encodePacked("1"));
+    }
     
-    uint256 public tokenCounter = 0;    
-    uint256 public mintPrice = 0; //Set to 0 for testing
-    uint256 public totalAllowed = 11655; //777*13
-    uint256 public blockInterval = 6500; //About 6500 Blocks in a day per Etherscan data
-    uint256 public hmynInternval = 777;
+    /// @notice Burn token function, can only be used by Token Owner or Approved
+    function burn(
+        address account,
+        uint256 id,
+        uint256 value
+    ) public override virtual {
+        require(
+            account == _msgSender() || isApprovedForAll(account, _msgSender()),
+            "ERC1155: caller is not owner nor approved"
+        );
 
-    uint256 public currentHymn = 0;
-    uint256 public currentHmynTokenRangeEnd = 777;
-    uint256 public currentHmynStartBlock = 0;
-    uint256 public currentHmynEndBlock = block.number; 
-
-      constructor() ERC721("Anthromancer", "HYMN")
-    {   //Intitalize Hymn Struct w/all info here in contructor
-     
-        idToHymn[0] = Hymn(
-            1,
-            "Hymn 01",
-            "IPFS ADDRESS"
-      );
-       
-       idToHymn[1] = Hymn(
-            2,
-            "Hymn 02",
-            "IPFS ADDRESS"
-      );
-       idToHymn[2] = Hymn(
-            3,
-            "Hymn 03",
-            "IPFS ADDRESS"
-      );
-
-        idToHymn[3] = Hymn(
-            4,
-            "Hymn 04",
-            "IPFS ADDRESS"
-      );
-
-       
+        _burn(account, id, value);
+        supply= supply - value;
     }
-
-   struct Hymn {
-        uint256 _hymn;
-        string _hymnName;
-        string _ipfsAddress;
-    } mapping(uint256 => Hymn) public idToHymn;
-
-    //Main Mint Function
-    function mintHmyn()payable public {
-      require(tokenCounter < totalAllowed);
-      require(msg.value == mintPrice);
-
-     //Check block number & mint logic
-      if (block.number > currentHmynStartBlock){
-       _safeMint(msg.sender, tokenCounter);
-       _setTokenURI(tokenCounter, idToHymn[currentHymn]._ipfsAddress);    
-       tokenCounter = tokenCounter + 1;
-      }
-
-     //Alter token range logic
-      //IF the # of Hymns minted is greater than or equal to the current Hmyn Range End
-      //THEN adjust the currentHmyn UP by 1
-      //AND move the START of the Current Hymn Range forward by the blockInterval
-      //AND move the END of the Current Hymn Range forward by the blockInterval
-      //AND move the Current Hmyn Range End forward by the hmynInternval
-      if (tokenCounter >= currentHmynTokenRangeEnd){
-          currentHymn = currentHymn + 1;
-          currentHmynStartBlock = currentHmynStartBlock + blockInterval;
-          currentHmynEndBlock = currentHmynEndBlock + blockInterval;
-          currentHmynTokenRangeEnd = currentHmynTokenRangeEnd + hmynInternval;
-      }
-    }
- 
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
-        internal
-        override(ERC721, ERC721Enumerable)
-     {
-        super._beforeTokenTransfer(from, to, tokenId);
-     }
-
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
-     }
-
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-     {
-        return super.tokenURI(tokenId);
-     }
-
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC721Enumerable)
-        returns (bool)
-     {
-        return super.supportsInterface(interfaceId);
-     }
-
-
-
 }
